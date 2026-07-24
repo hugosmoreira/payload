@@ -75,46 +75,62 @@ const registerExportHandler = (
       return
     }
 
-    registerHandler(({ siblingData, value }) => {
-      if (isPolymorphicRelValue(value)) {
-        const id = getPolymorphicRelId(value)
-        if (id !== undefined) {
-          siblingData[`${fullKey}_id`] = id
-          siblingData[`${fullKey}_relationTo`] = value.relationTo
-        }
+    registerHandler(({ format, siblingData, value }) => {
+      if (!isPolymorphicRelValue(value)) {
+        return format === 'json' ? undefined : null
       }
+      const id = getPolymorphicRelId(value)
+      if (id === undefined) {
+        return format === 'json' ? undefined : null
+      }
+
+      // JSON can hold the relationship natively — no columns to flatten into.
+      if (format === 'json') {
+        return { relationTo: value.relationTo, value: id }
+      }
+      siblingData[`${fullKey}_id`] = id
+      siblingData[`${fullKey}_relationTo`] = value.relationTo
       return null
     })
     return
   }
 
   if (!Array.isArray(field.relationTo)) {
-    registerHandler(({ siblingData, value }) => {
-      if (Array.isArray(value)) {
-        value.forEach((val, i) => {
-          const id = typeof val === 'object' && val ? (val as { id: unknown }).id : val
-          siblingData[`${fullKey}_${i}_id`] = id
-        })
-        return null
+    registerHandler(({ format, siblingData, value }) => {
+      if (!Array.isArray(value)) {
+        return undefined
       }
-      return undefined
+      const ids = value.map((val) =>
+        typeof val === 'object' && val ? (val as { id: unknown }).id : val,
+      )
+      // JSON can hold the relationship natively — no columns to flatten into.
+      if (format === 'json') {
+        return ids
+      }
+      ids.forEach((id, i) => {
+        siblingData[`${fullKey}_${i}_id`] = id
+      })
+      return null
     })
     return
   }
 
-  registerHandler(({ siblingData, value }) => {
-    if (Array.isArray(value)) {
-      value.forEach((val, i) => {
-        if (isPolymorphicRelValue(val)) {
-          const id = getPolymorphicRelId(val)
-          if (id !== undefined) {
-            siblingData[`${fullKey}_${i}_id`] = id
-            siblingData[`${fullKey}_${i}_relationTo`] = val.relationTo
-          }
-        }
-      })
-      return null
+  registerHandler(({ format, siblingData, value }) => {
+    if (!Array.isArray(value)) {
+      return undefined
     }
-    return undefined
+    const rels = value
+      .filter((val) => isPolymorphicRelValue(val))
+      .map((val) => ({ id: getPolymorphicRelId(val), relationTo: val.relationTo }))
+      .filter((rel) => rel.id !== undefined)
+    // JSON can hold the relationship natively — no columns to flatten into.
+    if (format === 'json') {
+      return rels.map((rel) => ({ relationTo: rel.relationTo, value: rel.id }))
+    }
+    rels.forEach((rel, i) => {
+      siblingData[`${fullKey}_${i}_id`] = rel.id
+      siblingData[`${fullKey}_${i}_relationTo`] = rel.relationTo
+    })
+    return null
   })
 }
