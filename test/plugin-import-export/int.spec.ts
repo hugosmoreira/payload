@@ -4865,17 +4865,11 @@ describe('@payloadcms/plugin-import-export', () => {
 
       expect(importDoc.status).toBe('completed')
       expect(importedPages.docs).toHaveLength(1)
-      // Fails today: the relationship comes back empty because the JSON import
-      // path ignores the flattened `hasManyMonomorphic_N_id` keys.
       expect(imported?.hasManyMonomorphic).toHaveLength(2)
       expect((imported?.hasManyMonomorphic ?? []).map(extractID)).toEqual([post1.id, post2.id])
     })
 
-    // Same root cause as #17110, applied to a single polymorphic relationship:
-    // getExportFieldFunctions.ts flattens hasOnePolymorphic into
-    // `hasOnePolymorphic_id`/`hasOnePolymorphic_relationTo` and nulls the field
-    // for every format, but only the CSV import path un-flattens those keys.
-    it('reproduces #17110 for hasOnePolymorphic: relationship is empty after JSON export/import roundtrip', async () => {
+    it('hasOnePolymorphic: relationship is empty after JSON export/import roundtrip', async () => {
       const post1 = await payload.create({
         collection: 'posts',
         data: { title: 'hasOnePolymorphic JSON Post' },
@@ -4961,19 +4955,13 @@ describe('@payloadcms/plugin-import-export', () => {
 
       expect(importDoc.status).toBe('completed')
       expect(importedPages.docs).toHaveLength(1)
-      // Fails today: the relationship comes back empty because the JSON import
-      // path ignores the flattened `hasOnePolymorphic_id`/`_relationTo` keys.
       expect(imported?.hasOnePolymorphic).toEqual({
         relationTo: 'posts',
         value: post1.id,
       })
     })
 
-    // Same root cause as #17110, applied to a hasMany polymorphic relationship:
-    // getExportFieldFunctions.ts flattens each array item into
-    // `hasManyPolymorphic_N_id`/`hasManyPolymorphic_N_relationTo` and nulls the
-    // field for every format, but only the CSV import path un-flattens those keys.
-    it('reproduces #17110 for hasManyPolymorphic: relationship is empty after JSON export/import roundtrip', async () => {
+    it('hasManyPolymorphic: relationship is empty after JSON export/import roundtrip', async () => {
       const testUser = await payload.find({
         collection: 'users',
         limit: 1,
@@ -5063,8 +5051,6 @@ describe('@payloadcms/plugin-import-export', () => {
 
       expect(importDoc.status).toBe('completed')
       expect(importedPages.docs).toHaveLength(1)
-      // Fails today: the relationship comes back empty because the JSON import
-      // path ignores the flattened `hasManyPolymorphic_N_id`/`_relationTo` keys.
       expect(imported?.hasManyPolymorphic).toHaveLength(2)
       expect(imported?.hasManyPolymorphic?.[0]).toEqual({
         relationTo: 'users',
